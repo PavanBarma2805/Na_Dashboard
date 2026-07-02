@@ -414,12 +414,17 @@ if st.session_state.search_performed and st.session_state.battery_data:
     mdv = safe_extract(selected_doc, "max_delta_volume", None)
     capacity = safe_extract(selected_doc, "capacity_grav", None)
     
+    mdv_text = f"{float(mdv) * 100:.2f}%" if mdv is not None else "N/A"
+    capacity_text = f"{float(capacity):.2f}" if capacity is not None else "N/A"
+    
     if add_to_basket:
+        # Added Gravimetric Capacity right into the comparison payload!
         basket_item = {
             "Battery ID": getattr(selected_doc, "battery_id", "Unknown"),
             "Formula": pretty_formula_name,
             "Average Voltage (V)": round(avg_voltage, 2),
-            "Max Delta Volume (%)": f"{float(mdv) * 100:.2f}%" if mdv is not None else "N/A",
+            "Gravimetric Capacity (mAh/g)": capacity_text,
+            "Max Delta Volume (%)": mdv_text,
             "Crystal System": crys_system
         }
         if basket_item["Battery ID"] not in [item["Battery ID"] for item in st.session_state.comparison_basket]:
@@ -434,9 +439,6 @@ if st.session_state.search_performed and st.session_state.battery_data:
     with tab1:
         st.markdown("### 📊 DFT Structural & Electrochemical Parameters")
         col_metrics1, col_metrics2 = st.columns(2)
-        
-        mdv_text = f"{float(mdv) * 100:.2f}%" if mdv is not None else "N/A"
-        capacity_text = f"{float(capacity):.2f}" if capacity is not None else "N/A"
         
         with col_metrics1:
             st.markdown(f"""
@@ -491,7 +493,32 @@ if st.session_state.search_performed and st.session_state.battery_data:
             view.zoomTo()
             
             showmol(view, height=500, width=800)
-            st.markdown("<br>", unsafe_allow_html=True)
+            
+            # --- NEW EXTENSION: DYNAMIC ATOM COLOR LEGEND ---
+            # Traditional chemical element color mapping (CPK colors) matching py3Dmol's parser
+            cpk_colors = {
+                "Na": "#9E7BFF", "O": "#FF0D0D", "F": "#90E050", "P": "#FF8000", 
+                "S": "#FFFF30", "Fe": "#E67E22", "Mn": "#9C27B0", "Co": "#F1C40F", 
+                "Ni": "#1ABC9C", "V": "#E74C3C", "Cr": "#95A5A6", "Cu": "#D35400"
+            }
+            default_color = "#34495E" # Fallback if element color isn't manually mapped
+            
+            # Identify unique elements present inside this specific unit cell configuration
+            unique_elements = sorted(list(set(str(specie.element) for specie in structure.species)))
+            
+            st.markdown("**Atoms Legend:**")
+            legend_html = '<div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; background-color: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #e9ecef;">'
+            for el in unique_elements:
+                color = cpk_colors.get(el, default_color)
+                legend_html += f'''
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 16px; height: 16px; background-color: {color}; border-radius: 50%; border: 1px solid #333;"></div>
+                    <span style="font-weight: 600; font-size: 0.95rem;">{el}</span>
+                </div>
+                '''
+            legend_html += '</div>'
+            st.markdown(legend_html, unsafe_allow_html=True)
+            # --- END OF LEGEND IMPLEMENTATION ---
             
             file_name = f"{raw_formula_name}_{getattr(selected_doc, 'battery_id', 'struct')}.cif"
             
