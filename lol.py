@@ -494,7 +494,7 @@ if st.session_state.search_performed and st.session_state.battery_data:
             
             showmol(view, height=500, width=800)
             
-            # --- NEW EXTENSION: DYNAMIC ATOM COLOR LEGEND ---
+            # --- FIXED DYNAMIC ATOM COLOR LEGEND ---
             # Traditional chemical element color mapping (CPK colors) matching py3Dmol's parser
             cpk_colors = {
                 "Na": "#9E7BFF", "O": "#FF0D0D", "F": "#90E050", "P": "#FF8000", 
@@ -503,8 +503,8 @@ if st.session_state.search_performed and st.session_state.battery_data:
             }
             default_color = "#34495E" # Fallback if element color isn't manually mapped
             
-            # Identify unique elements present inside this specific unit cell configuration
-            unique_elements = sorted(list(set(site.species_string for site in structure)))
+            # Extract clean, standard element strings using the structure's overall composition
+            unique_elements = sorted([el.symbol for el in structure.composition.elements])
             
             st.markdown("**Atoms Legend:**")
             legend_html = '<div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; background-color: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #e9ecef;">'
@@ -517,7 +517,9 @@ if st.session_state.search_performed and st.session_state.battery_data:
                 </div>
                 '''
             legend_html += '</div>'
-            st.markdown(legend_html, unsafe_allow_html=True)
+            
+            # CRITICAL FIX: Added unsafe_allow_html=True so it renders visually instead of plain text!
+            st.markdown(legend_html, unsafe_allow_html=True) 
             # --- END OF LEGEND IMPLEMENTATION ---
             
             file_name = f"{raw_formula_name}_{getattr(selected_doc, 'battery_id', 'struct')}.cif"
