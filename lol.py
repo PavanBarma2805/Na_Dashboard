@@ -390,8 +390,8 @@ if st.session_state.search_performed and st.session_state.battery_data:
     structure = None
     crys_system = "Unknown"
     sg_symbol = "Unknown"
-    lattice_html = "<div class='metric-value' style='font-size: 18px;'>N/A</div>"
-    angles_html = "<div class='metric-value' style='font-size: 18px;'>N/A</div>"
+    lattice_text = "N/A"
+    angles_text = "N/A"
     
     with st.spinner("Fetching Crystal Structure & Symmetry Data..."):
         try:
@@ -403,9 +403,8 @@ if st.session_state.search_performed and st.session_state.battery_data:
                     sg_symbol = sga.get_space_group_symbol()
                     lattice = structure.lattice
                     
-                    # Single-line HTML templates clean up parsing display bugs completely
-                    lattice_html = f'<div class="metric-value" style="font-size: 18px;">a = {lattice.a:.3f}, b = {lattice.b:.3f}, c = {lattice.c:.3f}</div>'
-                    angles_html = f'<div class="metric-value" style="font-size: 18px;">α = {lattice.alpha:.2f}, β = {lattice.beta:.2f}, γ = {lattice.gamma:.2f}</div>'
+                    lattice_text = f"a = {lattice.a:.3f}, b = {lattice.b:.3f}, c = {lattice.c:.3f}"
+                    angles_text = f"α = {lattice.alpha:.2f}, β = {lattice.beta:.2f}, γ = {lattice.gamma:.2f}"
         except Exception as e:
             st.error(f"Could not automatically resolve structural unit cell metadata for ID {target_struct_id}: {e}")
 
@@ -463,11 +462,11 @@ if st.session_state.search_performed and st.session_state.battery_data:
             </div>
             <div class="metric-card">
                 <div class="metric-label">Lattice Parameters (Å)</div>
-                {lattice_html}
+                <div class="metric-value" style="font-size: 1.15rem;">{lattice_text}</div>
             </div>
             <div class="metric-card">
                 <div class="metric-label">Lattice Angles (°)</div>
-                {angles_html}
+                <div class="metric-value" style="font-size: 1.15rem;">{angles_text}</div>
             </div>
             """, unsafe_allow_html=True)
             
