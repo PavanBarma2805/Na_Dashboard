@@ -381,7 +381,7 @@ if st.session_state.search_performed and st.session_state.battery_data:
     </div>
     """, unsafe_allow_html=True)
     
-    # 5b. Fetching Crystal Structure Data
+# 5b. Fetching Crystal Structure Data
     current_view_state = st.session_state.get("view_state_toggle", "Discharged (Sodiated)")
     target_struct_id = safe_extract(selected_doc, "id_charge", "") if current_view_state == "Charged (Desodiated)" else safe_extract(selected_doc, "id_discharge", "")
     if not target_struct_id:
@@ -418,7 +418,6 @@ if st.session_state.search_performed and st.session_state.battery_data:
     capacity_text = f"{float(capacity):.2f}" if capacity is not None else "N/A"
     
     if add_to_basket:
-        # Added Gravimetric Capacity right into the comparison payload!
         basket_item = {
             "Battery ID": getattr(selected_doc, "battery_id", "Unknown"),
             "Formula": pretty_formula_name,
@@ -486,34 +485,41 @@ if st.session_state.search_performed and st.session_state.battery_data:
             cif_writer = CifWriter(structure)
             cif_str = str(cif_writer)
             
-            view = py3Dmol.view(width=800, height=500)
-            view.addModel(cif_str, 'cif')
-            view.setStyle({'sphere': {'scale': 0.3}, 'stick': {'radius': 0.15}})
-            view.addUnitCell()
-            view.zoomTo()
-            
-            showmol(view, height=500, width=800)
-            
-           # --- ISOLATED ATOM COLOR LEGEND ---
-            # Traditional chemical element color mapping (CPK colors) matching py3Dmol's parser
-            cpk_colors = {
+            # 1. SETUP COLOR DEFINITION SCHEME
+            battery_element_colors = {
                 "Na": "#9E7BFF", "O": "#FF0D0D", "F": "#90E050", "P": "#FF8000", 
                 "S": "#FFFF30", "Fe": "#E67E22", "Mn": "#9C27B0", "Co": "#F1C40F", 
                 "Ni": "#1ABC9C", "V": "#E74C3C", "Cr": "#95A5A6", "Cu": "#D35400"
             }
             default_color = "#34495E"
             
-            # Extract clean element symbols safely
+            # 2. GENERATE AND STYLE VIEW MODELS
+            view = py3Dmol.view(width=800, height=500)
+            view.addModel(cif_str, 'cif')
+            
             unique_elements = sorted([el.symbol for el in structure.composition.elements])
+            for el in unique_elements:
+                assigned_color = battery_element_colors.get(el, default_color)
+                view.setStyle(
+                    {'elem': el}, 
+                    {
+                        'sphere': {'scale': 0.3, 'color': assigned_color}, 
+                        'stick': {'radius': 0.15, 'color': assigned_color}
+                    }
+                )
             
+            view.addUnitCell()
+            view.zoomTo()
+            
+            showmol(view, height=500, width=800)
+            
+            # 3. ISOLATED MATCHING LEGEND IFRAME
             st.markdown("**Atoms Legend:**")
-            
-            # Build the pure HTML layout string
             legend_html = '''
-            <div style="display: flex; flex-wrap: wrap; gap: 15px; background-color: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #e9ecef; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+            <div style="display: flex; flex-wrap: wrap; gap: 15px; background-color: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #e9ecef; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
             '''
             for el in unique_elements:
-                color = cpk_colors.get(el, default_color)
+                color = battery_element_colors.get(el, default_color)
                 legend_html += f'''
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <div style="width: 16px; height: 16px; background-color: {color}; border-radius: 50%; border: 1px solid #333;"></div>
@@ -522,9 +528,7 @@ if st.session_state.search_performed and st.session_state.battery_data:
                 '''
             legend_html += '</div>'
             
-            # Renders inside an isolated iframe component so it NEVER prints raw text
             st.components.v1.html(legend_html, height=50)
-            # --- END OF LEGEND IMPLEMENTATION ---
             
             file_name = f"{raw_formula_name}_{getattr(selected_doc, 'battery_id', 'struct')}.cif"
             
