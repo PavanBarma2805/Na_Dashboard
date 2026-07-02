@@ -440,15 +440,15 @@ if st.session_state.search_performed and st.session_state.battery_data:
         
         with col_metrics1:
             st.markdown(f"""
-            <div class="metric-card">
+            <div class="metric-card" style="height: 125px; display: flex; flex-direction: column; justify-content: center;">
                 <div class="metric-label">Average Voltage (V)</div>
                 <div class="metric-value">{avg_voltage:.2f}</div>
             </div>
-            <div class="metric-card">
+            <div class="metric-card" style="height: 125px; display: flex; flex-direction: column; justify-content: center;">
                 <div class="metric-label">Max Delta Volume</div>
                 <div class="metric-value">{mdv_text}</div>
             </div>
-            <div class="metric-card">
+            <div class="metric-card" style="height: 125px; display: flex; flex-direction: column; justify-content: center;">
                 <div class="metric-label">Gravimetric Capacity (mAh/g)</div>
                 <div class="metric-value">{capacity_text}</div>
             </div>
@@ -456,15 +456,15 @@ if st.session_state.search_performed and st.session_state.battery_data:
             
         with col_metrics2:
             st.markdown(f"""
-            <div class="metric-card">
+            <div class="metric-card" style="height: 125px; display: flex; flex-direction: column; justify-content: center;">
                 <div class="metric-label">Crystal System & Space Group</div>
                 <div class="metric-value">{crys_system} ({sg_symbol})</div>
             </div>
-            <div class="metric-card">
+            <div class="metric-card" style="height: 125px; display: flex; flex-direction: column; justify-content: center;">
                 <div class="metric-label">Lattice Parameters (Å)</div>
                 <div class="metric-value" style="font-size: 1.15rem;">{lattice_text}</div>
             </div>
-            <div class="metric-card">
+            <div class="metric-card" style="height: 125px; display: flex; flex-direction: column; justify-content: center;">
                 <div class="metric-label">Lattice Angles (°)</div>
                 <div class="metric-value" style="font-size: 1.15rem;">{angles_text}</div>
             </div>
