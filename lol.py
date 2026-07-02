@@ -103,6 +103,16 @@ def get_atomic_mix(structure):
     total_atoms = comp.num_atoms
     return {str(el): round(count / total_atoms, 4) for el, count in comp.items()}
 
+def format_chemical_formula(formula_str):
+    """Converts regular numbers in a chemical formula string to Unicode subscripts."""
+    if not formula_str:
+        return ""
+    subscript_mapping = {
+        '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄',
+        '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉'
+    }
+    return "".join(subscript_mapping.get(char, char) for char in formula_str)
+
 def calculate_packing_fraction(structure):
     """Estimates the lattice packing fraction using atomic/ionic radii."""
     total_atomic_vol = 0.0
@@ -162,10 +172,10 @@ def get_api_key():
 
 API_KEY = get_api_key()
 
-
 # -----------------------------------------------------------------------------
 # 4. Main App Layout: Input & Visualization Split
 # -----------------------------------------------------------------------------
+
 st.title("🔋 Sodium-Ion Cathode Screener")
 st.markdown("A robust data mining and interactive 3D visualization dashboard for Na-ion battery materials.")
 
@@ -204,6 +214,23 @@ with col_input:
     st.markdown("---")
     search_clicked = st.button("Search Battery Database", type="primary", use_container_width=True)
     
+   # NEW FEATURE: Visual active status container right under the search button
+    if st.session_state.search_performed and st.session_state.battery_data:
+        if st.session_state.active_material:
+            raw_formula = st.session_state.active_material.split(" - ")[0]
+            current_id = st.session_state.active_material.split("(")[-1].replace(")", "")
+            
+            # Format the formula to include subscripts!
+            pretty_formula = format_chemical_formula(raw_formula)
+            
+            st.markdown(f"""
+            <div style="background-color: #e3f2fd; border-left: 5px solid #1e88e5; padding: 15px; border-radius: 6px; margin-top: 15px;">
+                <span style="color: #0d47a1; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">🔎 Currently Viewing Target</span>
+                <div style="color: #1565c0; font-size: 1.5rem; font-weight: 700; margin-top: 4px;">{pretty_formula}</div>
+                <span style="color: #546e7a; font-size: 0.8rem; font-family: monospace;">Database ID: {current_id}</span>
+            </div>
+            """, unsafe_allow_html=True)
+
     # Execution Logic for Search
     if search_clicked:
         if not selected_elements:
@@ -318,14 +345,19 @@ if st.session_state.search_performed and st.session_state.battery_data:
     
     col_sel, col_btn = st.columns([3, 1])
     with col_sel:
-        selected_option = st.selectbox(
+        # Generate formatted list options for the dropdown menu
+        formatted_options_map = {opt: f"{format_chemical_formula(opt.split(' - ')[0])} - {opt.split(' - ')[1]}" for opt in options_list}
+        
+        selected_option_formatted = st.selectbox(
             "2. Selected Battery Material to Analyze:", 
-            options_list,
-            index=current_index
+            options=options_list,
+            index=current_index,
+            format_func=lambda x: formatted_options_map[x]
         )
+        
         # Allow manual dropdown override
-        if selected_option != st.session_state.active_material:
-            st.session_state.active_material = selected_option
+        if selected_option_formatted != st.session_state.active_material:
+            st.session_state.active_material = selected_option_formatted
             st.rerun()
             
     selected_doc = options_dict[st.session_state.active_material]
@@ -337,11 +369,14 @@ if st.session_state.search_performed and st.session_state.battery_data:
     target_mp_id = safe_extract(selected_doc, "id_discharge", getattr(selected_doc, "battery_id", ""))
     materials_project_url = f"https://next-gen.materialsproject.org/materials/{target_mp_id}"
     
+    raw_formula_name = safe_extract(selected_doc, "formula_discharge", "Material")
+    pretty_formula_name = format_chemical_formula(raw_formula_name)
+    
     st.markdown(f"""
     <div class="metric-card" style="border-left: 5px solid #3B82F6; margin-top: 10px; padding: 12px 20px; text-align: left;">
         <div class="metric-label" style="font-weight: bold; margin-bottom: 2px;">External Database Verification</div>
         <a href="{materials_project_url}" target="_blank" style="text-decoration: none; color: #3B82F6; font-weight: 600; font-size: 0.95rem;">
-            🔗 View full thermodynamic & electronic profile for {target_mp_id} on Materials Project ↗
+            🔗 View full thermodynamic & electronic profile for {pretty_formula_name} ({target_mp_id}) on Materials Project ↗
         </a>
     </div>
     """, unsafe_allow_html=True)
@@ -367,16 +402,10 @@ if st.session_state.search_performed and st.session_state.battery_data:
                     crys_system = sga.get_crystal_system().capitalize()
                     sg_symbol = sga.get_space_group_symbol()
                     lattice = structure.lattice
-                    lattice_html = f"""
-                    <div class="metric-value" style="font-size: 18px;">
-                        a = {lattice.a:.3f}, b = {lattice.b:.3f}, c = {lattice.c:.3f}
-                    </div>
-                    """
-                    angles_html = f"""
-                    <div class="metric-value" style="font-size: 18px;">
-                        α = {lattice.alpha:.2f}, β = {lattice.beta:.2f}, γ = {lattice.gamma:.2f}
-                    </div>
-                    """
+                    
+                    # Single-line HTML templates clean up parsing display bugs completely
+                    lattice_html = f'<div class="metric-value" style="font-size: 18px;">a = {lattice.a:.3f}, b = {lattice.b:.3f}, c = {lattice.c:.3f}</div>'
+                    angles_html = f'<div class="metric-value" style="font-size: 18px;">α = {lattice.alpha:.2f}, β = {lattice.beta:.2f}, γ = {lattice.gamma:.2f}</div>'
         except Exception as e:
             st.error(f"Could not automatically resolve structural unit cell metadata for ID {target_struct_id}: {e}")
 
@@ -388,7 +417,7 @@ if st.session_state.search_performed and st.session_state.battery_data:
     if add_to_basket:
         basket_item = {
             "Battery ID": getattr(selected_doc, "battery_id", "Unknown"),
-            "Formula": safe_extract(selected_doc, "formula_discharge", "Unknown"),
+            "Formula": pretty_formula_name,
             "Average Voltage (V)": round(avg_voltage, 2),
             "Max Delta Volume (%)": f"{float(mdv) * 100:.2f}%" if mdv is not None else "N/A",
             "Crystal System": crys_system
@@ -464,11 +493,10 @@ if st.session_state.search_performed and st.session_state.battery_data:
             showmol(view, height=500, width=800)
             st.markdown("<br>", unsafe_allow_html=True)
             
-            formula_name = safe_extract(selected_doc, "formula_discharge", "Material")
-            file_name = f"{formula_name}_{getattr(selected_doc, 'battery_id', 'struct')}.cif"
+            file_name = f"{raw_formula_name}_{getattr(selected_doc, 'battery_id', 'struct')}.cif"
             
             st.download_button(
-                label="⬇️ Download .cif File for QuantumATK",
+                label=f"⬇️ Download .cif File for {pretty_formula_name}",
                 data=cif_str,
                 file_name=file_name,
                 mime="text/plain",
@@ -503,7 +531,7 @@ if st.session_state.search_performed and st.session_state.battery_data:
             st.markdown("### 🔬 DFT & QuantumATK Pre-Processor Setup")
             
             nk_a, nk_b, nk_c = estimate_kpoints(structure, spacing=0.04)
-            st.markdown(f"**Suggested Reciprocal k-point Grid:** `{nk_a} × {nk_b} × {nk_c}` (aiming for reciprocal spacing of ~0.04 Å⁻¹)")
+            st.markdown(f"**Suggested Reciprocal $k$-point Grid:** `{nk_a} × {nk_b} × {nk_c}` (aiming for reciprocal spacing of ~0.04 Å⁻¹)")
             
             check_magnetic_moments(structure)
         else:
