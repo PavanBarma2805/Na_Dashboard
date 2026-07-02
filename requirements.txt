@@ -1,0 +1,8 @@
+streamlit
+py3Dmol
+stmol
+mp-api
+pymatgen
+pandas
+plotly
+ipython_genutils
