@@ -494,32 +494,36 @@ if st.session_state.search_performed and st.session_state.battery_data:
             
             showmol(view, height=500, width=800)
             
-            # --- FIXED DYNAMIC ATOM COLOR LEGEND ---
+           # --- ISOLATED ATOM COLOR LEGEND ---
             # Traditional chemical element color mapping (CPK colors) matching py3Dmol's parser
             cpk_colors = {
                 "Na": "#9E7BFF", "O": "#FF0D0D", "F": "#90E050", "P": "#FF8000", 
                 "S": "#FFFF30", "Fe": "#E67E22", "Mn": "#9C27B0", "Co": "#F1C40F", 
                 "Ni": "#1ABC9C", "V": "#E74C3C", "Cr": "#95A5A6", "Cu": "#D35400"
             }
-            default_color = "#34495E" # Fallback if element color isn't manually mapped
+            default_color = "#34495E"
             
-            # Extract clean, standard element strings using the structure's overall composition
+            # Extract clean element symbols safely
             unique_elements = sorted([el.symbol for el in structure.composition.elements])
             
             st.markdown("**Atoms Legend:**")
-            legend_html = '<div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; background-color: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #e9ecef;">'
+            
+            # Build the pure HTML layout string
+            legend_html = '''
+            <div style="display: flex; flex-wrap: wrap; gap: 15px; background-color: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #e9ecef; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+            '''
             for el in unique_elements:
                 color = cpk_colors.get(el, default_color)
                 legend_html += f'''
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <div style="width: 16px; height: 16px; background-color: {color}; border-radius: 50%; border: 1px solid #333;"></div>
-                    <span style="font-weight: 600; font-size: 0.95rem;">{el}</span>
+                    <span style="font-weight: 600; font-size: 0.95rem; color: #333;">{el}</span>
                 </div>
                 '''
             legend_html += '</div>'
             
-            # CRITICAL FIX: Added unsafe_allow_html=True so it renders visually instead of plain text!
-            st.markdown(legend_html, unsafe_allow_html=True) 
+            # Renders inside an isolated iframe component so it NEVER prints raw text
+            st.components.v1.html(legend_html, height=50)
             # --- END OF LEGEND IMPLEMENTATION ---
             
             file_name = f"{raw_formula_name}_{getattr(selected_doc, 'battery_id', 'struct')}.cif"
