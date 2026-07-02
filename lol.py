@@ -504,7 +504,7 @@ if st.session_state.search_performed and st.session_state.battery_data:
             default_color = "#34495E" # Fallback if element color isn't manually mapped
             
             # Identify unique elements present inside this specific unit cell configuration
-            unique_elements = sorted(list(set(str(specie.element) for specie in structure.species)))
+            unique_elements = sorted(list(set(site.species_string for site in structure)))
             
             st.markdown("**Atoms Legend:**")
             legend_html = '<div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; background-color: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #e9ecef;">'
